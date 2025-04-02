@@ -1,5 +1,7 @@
+import sequelize from "../../../database/config";
 import storeService from "../store.service";
 import Store from "../store.model";
+import { StoreLegacyIntegrator } from "../store.legacy";
 
 // Mock the Store model
 jest.mock("../store.model", () => ({
@@ -8,6 +10,16 @@ jest.mock("../store.model", () => ({
   create: jest.fn(),
   update: jest.fn(),
   destroy: jest.fn(),
+}));
+
+jest.mock("../store.legacy", () => ({
+  StoreLegacyIntegrator: jest.fn().mockImplementation(() => ({
+    sendToLegacySystem: jest.fn(),
+  })),
+}));
+
+jest.mock("../../../database/config", () => ({
+  transaction: jest.fn(),
 }));
 
 describe("StoreService", () => {
@@ -82,7 +94,7 @@ describe("StoreService", () => {
   });
 
   describe("create", () => {
-    it("should create a new store", async () => {
+    it("should create a new store and send it to the legacy system", async () => {
       // Arrange
       const storeData = {
         name: "New Store",
@@ -92,14 +104,47 @@ describe("StoreService", () => {
         isActive: true,
       };
       const createdStore = { id: "3", ...storeData };
+      const mockTransaction = jest.fn(async (callback: any) => callback({}));
+      (sequelize.transaction as jest.Mock).mockImplementation(mockTransaction);
       (Store.create as jest.Mock).mockResolvedValue(createdStore);
+      const mockSendToLegacySystem = jest.fn();
+      (StoreLegacyIntegrator as jest.Mock).mockImplementation(() => ({
+        sendToLegacySystem: mockSendToLegacySystem,
+      }));
 
       // Act
       const result = await storeService.create(storeData);
 
       // Assert
       expect(result).toEqual(createdStore);
-      expect(Store.create).toHaveBeenCalledWith(storeData);
+      expect(sequelize.transaction).toHaveBeenCalledTimes(1);
+      expect(Store.create).toHaveBeenCalledWith(storeData, { transaction: {} });
+      expect(mockSendToLegacySystem).toHaveBeenCalledWith(createdStore);
+    });
+
+    it("should throw an error if store creation fails", async () => {
+      // Arrange
+      const storeData = {
+        name: "New Store",
+        address: "789 Pine St",
+        locationId: "3",
+        capacity: 200,
+        isActive: true,
+      };
+      const mockError = new Error("Database error");
+      const mockTransaction = jest.fn(async (callback: any) => callback({}));
+      (sequelize.transaction as jest.Mock).mockImplementation(mockTransaction);
+      (Store.create as jest.Mock).mockRejectedValue(mockError);
+      const mockSendToLegacySystem = jest.fn();
+      (StoreLegacyIntegrator as jest.Mock).mockImplementation(() => ({
+        sendToLegacySystem: mockSendToLegacySystem,
+      }));
+
+      // Act & Assert
+      await expect(storeService.create(storeData)).rejects.toThrow(mockError);
+      expect(sequelize.transaction).toHaveBeenCalledTimes(1);
+      expect(Store.create).toHaveBeenCalledWith(storeData, { transaction: {} });
+      expect(mockSendToLegacySystem).not.toHaveBeenCalled();
     });
   });
 

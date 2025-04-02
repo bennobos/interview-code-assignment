@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import Location from "./location.model";
 
 export class LocationService {
@@ -51,10 +52,16 @@ export class LocationService {
 
   /**
    * Resolve a location by its identifier (id or code)
-   * This method needs to be implemented
    */
   async resolveByIdentifier(identifier: string): Promise<Location | null> {
-    throw new Error("Method not implemented");
+    return Location.findOne({
+      where: {
+        [Op.or]: [
+          { id: identifier },
+          { code: identifier },
+        ],
+      },
+    });
   }
 }
 

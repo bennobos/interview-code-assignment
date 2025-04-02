@@ -27,4 +27,10 @@ router.delete(
   warehouseController.deleteWarehouse.bind(warehouseController)
 );
 
+// POST /api/warehouses/:id/replace
+router.post(
+  "/:id/replace",
+  warehouseController.replaceWarehouse.bind(warehouseController)
+)
+
 export default router;

@@ -46,7 +46,8 @@ Warehouse.init(
     businessUnitCode: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
+      // task #3: business unit code no longer unique to support "replacing" warehouse scenario.
+      unique: false,
     },
     name: {
       type: DataTypes.STRING,
@@ -59,6 +60,7 @@ Warehouse.init(
     locationId: {
       type: DataTypes.UUID,
       allowNull: false,
+      // task #3: foreign key constraint validates an existing location is present.
       references: {
         model: Location,
         key: "id",

@@ -90,6 +90,33 @@ export class WarehouseController {
       res.status(500).json({ message: "Internal server error" });
     }
   }
+
+  /**
+   * Replace a warehouse by ID.
+   */
+  async replaceWarehouse(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const warehouseData = req.body;
+
+      const warehouse = await warehouseService.findById(id);
+      if (!warehouse) {
+        res.status(404).json({ message: "Warehouse not found" });
+        return;
+      }
+      if (warehouse.isArchived) {
+        res.status(409).json({ message: "Warehouse is already archived" });
+        return;
+      }
+
+      const newWarehouse = await warehouseService.replace(id, warehouseData);
+
+      res.status(200).json(newWarehouse);
+    } catch (error) {
+      console.error("Error replacing warehouse:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
 }
 
 const warehouseController = new WarehouseController();

@@ -10,6 +10,7 @@ jest.mock("../warehouse.controller", () => ({
   createWarehouse: jest.fn(),
   updateWarehouse: jest.fn(),
   deleteWarehouse: jest.fn(),
+  replaceWarehouse: jest.fn(),
 }));
 
 describe("Warehouse Routes", () => {

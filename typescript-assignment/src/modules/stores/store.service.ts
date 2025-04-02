@@ -1,4 +1,6 @@
 import { StoreLegacyIntegrator } from "./store.legacy";
+
+import sequelize from "../../database/config";
 import Store from "./store.model";
 
 export class StoreService {
@@ -20,13 +22,26 @@ export class StoreService {
    * Create a new store
    */
   async create(storeData: any): Promise<Store> {
-    const createdStore = await Store.create(storeData);
 
-    // send to legacy system
-    const legacyIntegrator = new StoreLegacyIntegrator();
-    legacyIntegrator.sendToLegacySystem(createdStore);
+    // Task 2 implementation notes.
+    // Since the creation of a "store" involves a single table, it is not necessary to use a transaction.
+    // By using "await" the remaining code is only executed after a succesfull insertion, which either passes or fails.
+    // However, a real-world scenario probably uses >1 query, so for this purpose transaction logic is added.
 
-    return createdStore;
+    try {
+      const createdStore = await sequelize.transaction(async t => {
+        return await Store.create(storeData, { transaction: t });
+      });
+
+      // send to legacy system
+      const legacyIntegrator = new StoreLegacyIntegrator();
+      legacyIntegrator.sendToLegacySystem(createdStore);
+
+      return createdStore;
+    } catch (error) {
+      console.error("Error creating store:", error);
+      throw(error);
+    }
   }
 
   /**
